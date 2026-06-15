@@ -1,0 +1,25 @@
+[package]
+name = "remind"
+version = "0.0.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+homepage = "https://github.com/d-e-s-o/remind"
+repository = "https://github.com/d-e-s-o/remind.git"
+readme = "README.md"
+categories = [
+  "accessibility",
+  "api-bindings",
+  "command-line-utilities",
+  "os::unix-apis"
+]
+keywords = [
+  "async",
+  "dbus",
+  "desktop",
+  "linux",
+  "notification",
+]
+description = """
+A program/daemon for scheduling reminder notifications after a given
+duration.
+"""
