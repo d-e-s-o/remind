@@ -23,3 +23,6 @@ description = """
 A program/daemon for scheduling reminder notifications after a given
 duration.
 """
+
+[dependencies]
+anyhow = { version = "1.0", default-features = false, features = ["std"] }
