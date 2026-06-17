@@ -2,5 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod reminder;
+mod reminders;
 
 fn main() {}
