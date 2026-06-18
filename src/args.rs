@@ -30,6 +30,7 @@ fn parse_duration(s: &str) -> Result<Duration> {
 
 /// A program for capture and transcription of audio.
 #[derive(Debug, Parser)]
+#[clap(version = env!("VERSION"))]
 pub struct Args {
   #[command(subcommand)]
   pub command: Command,
