@@ -4,9 +4,12 @@
 mod args;
 mod reminder;
 mod reminders;
+mod server;
 
 use std::env;
 use std::env::args_os;
+use std::env::temp_dir;
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use anyhow::Result;
@@ -14,7 +17,23 @@ use anyhow::Result;
 use clap::Parser as _;
 
 use crate::args::Args;
+use crate::args::Command;
+use crate::reminder::Reminder;
 
+
+fn socket_path() -> PathBuf {
+  let socket = format!("{}.sock", env!("CARGO_PKG_NAME"));
+  // Prefer `XDG_RUNTIME_DIR` for the socket if it exists, otherwise
+  // fall back to temp dir.
+  if let Ok(runtime_dir) = env::var("XDG_RUNTIME_DIR") {
+    let path = PathBuf::from(&runtime_dir);
+    if path.exists() {
+      return path.join(socket);
+    }
+  }
+
+  temp_dir().join(socket)
+}
 
 fn main_impl(args: Args) -> Result<()> {
   let Args {
@@ -23,6 +42,14 @@ fn main_impl(args: Args) -> Result<()> {
     foreground,
   } = args;
 
+  let time = match command {
+    Command::In(remind_in) => remind_in.target_time(),
+  };
+
+  let reminder = Reminder { time, message };
+
+  let socket_path = socket_path();
+  let () = server::run(&socket_path, reminder, foreground)?;
   Ok(())
 }
 
