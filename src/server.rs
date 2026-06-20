@@ -18,11 +18,15 @@ use std::sync::mpsc::sync_channel;
 use std::thread;
 use std::thread::ScopedJoinHandle;
 use std::thread::Thread;
+use std::time::Duration;
 
 use anyhow::Context as _;
 use anyhow::Result;
 use anyhow::anyhow;
 use anyhow::ensure;
+
+use dbus::arg::PropMap;
+use dbus::blocking::Connection;
 
 use libc::O_RDWR;
 use libc::SIGINT;
@@ -164,6 +168,47 @@ fn join_thread(thread: ScopedJoinHandle<'_, Result<()>>) -> Result<()> {
   })
 }
 
+/// Send a D-Bus notification using the given message.
+///
+/// This function does not wait for the user to acknowledge the message
+/// in any form -- it just sends.
+fn send_notification(message: &str) -> Result<()> {
+  let appname = env!("CARGO_BIN_NAME");
+  // Don't replace any notification -- always create a new one.
+  let replaces_id = 0u32;
+  let icon = "alarm";
+  let body = "";
+  // Never expire.
+  let timeout = 0i32;
+
+  let connection = Connection::new_session().context("failed to connect to session bus")?;
+
+  let proxy = connection.with_proxy(
+    "org.freedesktop.Notifications",
+    "/org/freedesktop/Notifications",
+    Duration::from_secs(5),
+  );
+
+  let (_msg_id,) = proxy
+    .method_call::<(u32,), _, _, _>(
+      "org.freedesktop.Notifications",
+      "Notify",
+      (
+        appname,
+        replaces_id,
+        icon,
+        message,
+        body,
+        Vec::<String>::new(),
+        PropMap::new(),
+        timeout,
+      ),
+    )
+    .context("failed to call D-Bus Notify")?;
+
+  Ok(())
+}
+
 fn run_now(listener: UnixListener, reminder: Reminder) -> Result<()> {
   let server_thread = thread::current();
   let () = install_signal_handlers(&server_thread)?;
@@ -200,8 +245,9 @@ fn run_now(listener: UnixListener, reminder: Reminder) -> Result<()> {
           // to schedule a new reminder. Start by checking whether we
           // reached the reminder time.
           if next.duration().is_none() {
-            // TODO: Send D-Bus notification.
-            println!("{}", next.message);
+            if let Err(err) = send_notification(&next.message) {
+              eprintln!("failed to send D-Bus notification: {err:#}");
+            }
             let () = reminders.remove_next();
           }
         } else {
