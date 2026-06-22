@@ -1,3 +1,5 @@
+[![pipeline](https://github.com/d-e-s-o/remind/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/d-e-s-o/remind/actions/workflows/test.yml)
+
 remind
 ======
 
