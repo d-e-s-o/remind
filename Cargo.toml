@@ -33,4 +33,3 @@ anyhow = { version = "1.0", default-features = false, features = ["std"] }
 clap = { version = "4.6", default-features = false, features = ["color", "derive", "error-context", "help", "std", "usage"] }
 dbus = { version = "0.9", default-features = false, features = ["stdfd", "vendored"] }
 libc = { version = "0.2", default-features = false }
-zbus = { version = "5.0", default-features = false, features = ["tokio"] }
