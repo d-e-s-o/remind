@@ -4,5 +4,7 @@
 remind
 ======
 
+- [Changelog](CHANGELOG.md)
+
 A program/daemon for scheduling reminder notifications after a given
 duration.
