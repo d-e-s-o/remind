@@ -1,5 +1,7 @@
 Unreleased
 ----------
+- Extended duration specification to support sequence of `h`, `m`, and
+  `s`
 - Adjusted release build compile options to optimize binary for size
 
 

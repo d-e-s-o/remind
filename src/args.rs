@@ -5,7 +5,7 @@ use std::time::Duration;
 use std::time::SystemTime;
 
 use anyhow::Result;
-use anyhow::anyhow;
+use anyhow::ensure;
 
 use clap::Args as Arguments;
 use clap::Parser;
@@ -14,17 +14,26 @@ use clap::Subcommand;
 
 /// Parse a duration from a string.
 fn parse_duration(s: &str) -> Result<Duration> {
-  let durations = [("s", 1), ("m", 60), ("h", 3600)];
+  let mut remaining = s;
+  let mut total = 0u64;
 
-  for (suffix, multiplier) in &durations {
-    if let Some(base) = s.strip_suffix(suffix)
-      && let Ok(count) = base.parse::<u64>()
-    {
-      return Ok(Duration::from_secs(count * multiplier))
+  ensure!(!s.is_empty(), "duration cannot be empty");
+
+  for (suffix, multiplier) in [("h", 3600), ("m", 60), ("s", 1)] {
+    if let Some(pos) = remaining.find(suffix) {
+      let (count, rest) = remaining.split_at(pos);
+
+      ensure!(!count.is_empty(), "invalid duration provided: {s}");
+
+      total += count.parse::<u64>()? * multiplier;
+      remaining = &rest[suffix.len()..];
     }
   }
 
-  Err(anyhow!("invalid duration provided: {s}"))
+  ensure!(remaining.is_empty(), "invalid duration provided: {s}");
+
+  let duration = Duration::from_secs(total);
+  Ok(duration)
 }
 
 
@@ -80,11 +89,33 @@ mod tests {
       parse_duration("5h").unwrap(),
       Duration::from_secs(5 * 60 * 60)
     );
+
+    assert_eq!(
+      parse_duration("1h2m3s").unwrap(),
+      Duration::from_secs(3600 + 120 + 3)
+    );
+    assert_eq!(
+      parse_duration("1h30m").unwrap(),
+      Duration::from_secs(3600 + 1800)
+    );
+    assert_eq!(
+      parse_duration("1h30s").unwrap(),
+      Duration::from_secs(3600 + 30)
+    );
+    assert_eq!(parse_duration("5m10s").unwrap(), Duration::from_secs(310));
+
+    // Wrong ordering.
+    assert!(parse_duration("30m1h").is_err());
+    assert!(parse_duration("1s2m").is_err());
+    assert!(parse_duration("1h2h").is_err());
+
     assert!(
       parse_duration("xxx")
         .unwrap_err()
         .to_string()
         .contains("invalid duration provided")
     );
+    assert!(parse_duration("1x").is_err());
+    assert!(parse_duration("").is_err());
   }
 }
