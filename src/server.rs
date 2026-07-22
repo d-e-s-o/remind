@@ -4,6 +4,7 @@
 use std::fs::remove_file;
 use std::io;
 use std::io::ErrorKind;
+use std::io::Read as _;
 use std::mem::MaybeUninit;
 use std::os::unix::net::UnixListener;
 use std::os::unix::net::UnixStream;
@@ -44,6 +45,9 @@ use libc::setsid;
 use libc::sigaction;
 use libc::sigemptyset;
 use libc::umask;
+
+use postcard::from_bytes as postcard_from_bytes;
+use postcard::to_io as postcard_to_io;
 
 use crate::reminder::Reminder;
 use crate::reminders::Reminders;
@@ -143,8 +147,12 @@ fn listen_incoming(
 
     match result {
       Ok(mut stream) => {
+        let mut buf = Vec::new();
+        let _cnt = stream
+          .read_to_end(&mut buf)
+          .context("failed to read Reminder object")?;
         let reminder =
-          Reminder::read_from(&mut stream).context("failed to read Reminder object")?;
+          postcard_from_bytes::<Reminder>(&buf).context("failed to deserialize Reminder object")?;
         // TODO: Must not unwrap.
         let () = remind_send.send(reminder).unwrap();
         let () = server_thread.unpark();
@@ -304,10 +312,9 @@ fn run_server(socket_path: &Path, reminder: Reminder, foreground: bool) -> Resul
 }
 
 
-fn signal_server(mut stream: UnixStream, reminder: Reminder) -> Result<()> {
-  let () = reminder
-    .write_to(&mut stream)
-    .context("failed to send Reminder object to server")?;
+fn signal_server(stream: UnixStream, reminder: Reminder) -> Result<()> {
+  let _stream =
+    postcard_to_io(&reminder, stream).context("failed to send Reminder object to server")?;
   Ok(())
 }
 
