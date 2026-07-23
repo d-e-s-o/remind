@@ -7,6 +7,8 @@ use std::time::SystemTime;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::args::RemindIn;
+
 
 /// The representation of a reminder to schedule.
 #[derive(Debug, Clone, Eq, Ord, PartialEq, PartialOrd, Deserialize, Serialize)]
@@ -24,6 +26,17 @@ impl Reminder {
   #[inline]
   pub fn duration(&self) -> Option<Duration> {
     self.time.duration_since(SystemTime::now()).ok()
+  }
+}
+
+impl From<RemindIn> for Reminder {
+  fn from(other: RemindIn) -> Self {
+    let RemindIn { duration, message } = other;
+
+    Self {
+      time: SystemTime::now() + duration,
+      message,
+    }
   }
 }
 

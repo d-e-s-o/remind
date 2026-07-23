@@ -38,15 +38,12 @@ fn socket_path() -> PathBuf {
 fn main_impl(args: Args) -> Result<()> {
   let Args {
     command,
-    message,
     foreground,
   } = args;
 
-  let time = match command {
-    Command::In(remind_in) => remind_in.target_time(),
+  let reminder = match command {
+    Command::In(remind_in) => Reminder::from(remind_in),
   };
-
-  let reminder = Reminder { time, message };
 
   let socket_path = socket_path();
   let () = server::run(&socket_path, reminder, foreground)?;

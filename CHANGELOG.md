@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Moved `message` position argument to be part of `in` sub-command
+
+
 0.2.1
 -----
 - Extended duration specification to support sequence of `h`, `m`, and

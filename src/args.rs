@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::time::Duration;
-use std::time::SystemTime;
 
 use anyhow::Result;
 use anyhow::ensure;
@@ -43,8 +42,6 @@ fn parse_duration(s: &str) -> Result<Duration> {
 pub struct Args {
   #[command(subcommand)]
   pub command: Command,
-  /// The reminder message.
-  pub message: String,
   /// Stay in the foreground instead of daemonizing.
   ///
   /// Note that this only flag affects the very first process created.
@@ -63,14 +60,11 @@ pub(crate) enum Command {
 /// A type representing the `in` command.
 #[derive(Debug, Arguments)]
 pub(crate) struct RemindIn {
+  /// The duration after which to send the reminder message.
   #[clap(value_parser = parse_duration)]
-  duration: Duration,
-}
-
-impl RemindIn {
-  pub fn target_time(&self) -> SystemTime {
-    SystemTime::now() + self.duration
-  }
+  pub duration: Duration,
+  /// The reminder message.
+  pub message: String,
 }
 
 
