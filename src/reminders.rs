@@ -5,13 +5,14 @@ use std::sync::mpsc::Receiver;
 use std::sync::mpsc::TryRecvError;
 
 use crate::reminder::Reminder;
+use crate::request::Request;
 
 
 /// A container for a set of reminders, ordered by due-time.
 #[derive(Debug)]
 pub(crate) struct Reminders {
-  /// The receiver end of a channel to receive new reminders from.
-  remind_recv: Receiver<Reminder>,
+  /// The receiver end of a channel to receive `Request` objects from.
+  request_recv: Receiver<Request>,
   /// The sorted list of reminders.
   ///
   /// The next one due is always the last one.
@@ -21,9 +22,9 @@ pub(crate) struct Reminders {
 impl Reminders {
   /// Create a new `Reminders` object with a single initial managed
   /// reminder.
-  pub fn new(remind_recv: Receiver<Reminder>, reminder: Reminder) -> Self {
+  pub fn new(request_recv: Receiver<Request>, reminder: Reminder) -> Self {
     Self {
-      remind_recv,
+      request_recv,
       reminders: vec![reminder],
     }
   }
@@ -33,9 +34,9 @@ impl Reminders {
   /// This method returns `Ok(())`, except when the channel to receive
   /// reminders on has been closed.
   pub fn try_recv(&mut self) -> Result<(), ()> {
-    let result = self.remind_recv.try_recv();
-    let reminder = match result {
-      Ok(reminder) => reminder,
+    let result = self.request_recv.try_recv();
+    let request = match result {
+      Ok(request) => request,
       Err(TryRecvError::Empty) => {
         // No data? Nothing for us to do.
         return Ok(())
@@ -44,6 +45,10 @@ impl Reminders {
         // If the sender has disconnected we should be shutting down.
         return Err(())
       },
+    };
+
+    let reminder = match request {
+      Request::Remind(reminder) => reminder,
     };
 
     let result = self
@@ -120,7 +125,7 @@ mod tests {
   /// report an error.
   #[test]
   fn disconnected_channel_receive() {
-    let (tx, rx) = channel::<Reminder>();
+    let (tx, rx) = channel::<Request>();
 
     let mut reminders = Reminders::new(rx, reminder(10, "initial"));
     drop(tx);
@@ -136,10 +141,10 @@ mod tests {
     let initial = reminder(20, "20");
     let mut reminders = Reminders::new(rx, initial);
 
-    let () = tx.send(reminder(10, "10")).unwrap();
+    let () = tx.send(Request::Remind(reminder(10, "10"))).unwrap();
     let () = reminders.try_recv().unwrap();
 
-    let () = tx.send(reminder(30, "30")).unwrap();
+    let () = tx.send(Request::Remind(reminder(30, "30"))).unwrap();
     let () = reminders.try_recv().unwrap();
 
     // Earliest due reminder should be returned.
@@ -160,7 +165,7 @@ mod tests {
     let r = reminder(10, "duplicate");
     let mut reminders = Reminders::new(rx, r.clone());
 
-    let () = tx.send(r).unwrap();
+    let () = tx.send(Request::Remind(r)).unwrap();
     let () = reminders.try_recv().unwrap();
 
     // Remove first copy.

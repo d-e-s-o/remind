@@ -53,6 +53,7 @@ use crate::args::Command;
 use crate::args::RemindIn;
 use crate::reminder::Reminder;
 use crate::reminders::Reminders;
+use crate::request::Request;
 
 
 /// The thread we wake up when we received an "exit signal".
@@ -138,7 +139,7 @@ fn install_signal_handlers(signal_thread: &Thread) -> Result<()> {
 /// object and wake up `server_thread` on receipt.
 fn listen_incoming(
   listener: UnixListener,
-  remind_send: SyncSender<Reminder>,
+  request_send: SyncSender<Request>,
   server_thread: Thread,
   exiting: &AtomicBool,
 ) -> Result<()> {
@@ -152,11 +153,11 @@ fn listen_incoming(
         let mut buf = Vec::new();
         let _cnt = stream
           .read_to_end(&mut buf)
-          .context("failed to read Reminder object")?;
-        let reminder =
-          postcard_from_bytes::<Reminder>(&buf).context("failed to deserialize Reminder object")?;
+          .context("failed to read Request object data")?;
+        let request =
+          postcard_from_bytes::<Request>(&buf).context("failed to deserialize Request object")?;
         // TODO: Must not unwrap.
-        let () = remind_send.send(reminder).unwrap();
+        let () = request_send.send(request).unwrap();
         let () = server_thread.unpark();
       },
       Err(e) => return Err(e).context("failed to accept new incoming connection"),
@@ -223,17 +224,17 @@ fn run_now(listener: UnixListener, reminder: Reminder) -> Result<()> {
   let server_thread = thread::current();
   let () = install_signal_handlers(&server_thread)?;
 
-  // The channel used for transferring `Reminder` objects to enqueue.
-  let (remind_send, remind_recv) = sync_channel::<Reminder>(1);
+  // The channel used for transferring `Request` objects.
+  let (request_send, request_recv) = sync_channel::<Request>(1);
 
-  let mut reminders = Reminders::new(remind_recv, reminder);
+  let mut reminders = Reminders::new(request_recv, reminder);
   let addr = listener
     .local_addr()
     .context("failed to retrieve UNIX socket address")?;
 
   let () = thread::scope(|scope| {
     let listener_thread =
-      scope.spawn(|| listen_incoming(listener, remind_send, server_thread, &EXITING));
+      scope.spawn(|| listen_incoming(listener, request_send, server_thread, &EXITING));
 
     let run = || {
       loop {

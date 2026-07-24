@@ -4,6 +4,7 @@
 mod args;
 mod reminder;
 mod reminders;
+mod request;
 mod server;
 
 use std::env;
