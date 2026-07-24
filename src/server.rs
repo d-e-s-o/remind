@@ -49,6 +49,8 @@ use libc::umask;
 use postcard::from_bytes as postcard_from_bytes;
 use postcard::to_io as postcard_to_io;
 
+use crate::args::Command;
+use crate::args::RemindIn;
 use crate::reminder::Reminder;
 use crate::reminders::Reminders;
 
@@ -296,7 +298,11 @@ fn run_server(socket_path: &Path, reminder: Reminder, foreground: bool) -> Resul
     Err(err) if err.kind() == ErrorKind::AddrInUse => {
       // We may have raced trying to create the listener -- and lost.
       // Start over.
-      return run(socket_path, reminder, foreground)
+      return run(
+        socket_path,
+        Command::In(RemindIn::from(reminder)),
+        foreground,
+      )
     },
     Err(err) => {
       return Err(err)
@@ -312,15 +318,26 @@ fn run_server(socket_path: &Path, reminder: Reminder, foreground: bool) -> Resul
 }
 
 
-fn signal_server(stream: UnixStream, reminder: Reminder) -> Result<()> {
-  let _stream =
-    postcard_to_io(&reminder, stream).context("failed to send Reminder object to server")?;
-  Ok(())
+fn signal_server(stream: UnixStream, command: Command) -> Result<()> {
+  match command {
+    Command::In(remind_in) => {
+      let reminder = Reminder::from(remind_in);
+      let _stream =
+        postcard_to_io(&reminder, stream).context("failed to send Reminder object to server")?;
+      Ok(())
+    },
+  }
 }
 
-pub(crate) fn run(socket_path: &Path, reminder: Reminder, foreground: bool) -> Result<()> {
+pub(crate) fn run(socket_path: &Path, command: Command, foreground: bool) -> Result<()> {
   match UnixStream::connect(socket_path) {
-    Ok(stream) => signal_server(stream, reminder),
-    Err(_) => run_server(socket_path, reminder, foreground),
+    Ok(stream) => signal_server(stream, command),
+    Err(_) => match command {
+      Command::In(remind_in) => {
+        let reminder = Reminder::from(remind_in);
+        let () = run_server(socket_path, reminder, foreground)?;
+        Ok(())
+      },
+    },
   }
 }

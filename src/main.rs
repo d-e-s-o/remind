@@ -17,8 +17,6 @@ use anyhow::Result;
 use clap::Parser as _;
 
 use crate::args::Args;
-use crate::args::Command;
-use crate::reminder::Reminder;
 
 
 fn socket_path() -> PathBuf {
@@ -41,12 +39,8 @@ fn main_impl(args: Args) -> Result<()> {
     foreground,
   } = args;
 
-  let reminder = match command {
-    Command::In(remind_in) => Reminder::from(remind_in),
-  };
-
   let socket_path = socket_path();
-  let () = server::run(&socket_path, reminder, foreground)?;
+  let () = server::run(&socket_path, command, foreground)?;
   Ok(())
 }
 
