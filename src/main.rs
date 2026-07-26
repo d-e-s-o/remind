@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod args;
+mod channel;
 mod reminder;
 mod reminders;
 mod request;
