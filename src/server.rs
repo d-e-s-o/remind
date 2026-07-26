@@ -5,6 +5,8 @@ use std::fs::remove_file;
 use std::io;
 use std::io::ErrorKind;
 use std::io::Read as _;
+use std::io::Write as _;
+use std::io::stdout;
 use std::mem::MaybeUninit;
 use std::os::unix::net::UnixListener;
 use std::os::unix::net::UnixStream;
@@ -51,7 +53,9 @@ use postcard::to_io as postcard_to_io;
 
 use crate::args::Command;
 use crate::args::RemindIn;
+use crate::channel::Channel;
 use crate::reminder::Reminder;
+use crate::reminder::format_reminders;
 use crate::reminders::Reminders;
 use crate::request::Request;
 
@@ -320,11 +324,31 @@ fn run_server(socket_path: &Path, reminder: Reminder, foreground: bool) -> Resul
 
 
 fn signal_server(stream: UnixStream, command: Command) -> Result<()> {
+  let send = |request| -> Result<()> {
+    let _stream =
+      postcard_to_io(request, stream).context("failed to send Request object to server")?;
+    Ok(())
+  };
+
   match command {
     Command::In(remind_in) => {
-      let reminder = Reminder::from(remind_in);
-      let _stream =
-        postcard_to_io(&reminder, stream).context("failed to send Reminder object to server")?;
+      let request = Request::from(remind_in);
+      let () = send(&request)?;
+      Ok(())
+    },
+    Command::List => {
+      let (read, write) = Channel::oneshot().unwrap();
+      let request = Request::List(write);
+
+      let () = send(&request)?;
+
+      // TODO: Must not unwrap.
+      let mut list = read
+        .read()
+        .context("failed to read Request::List response")
+        .unwrap();
+
+      let _result = stdout().write(format_reminders(&mut list).as_bytes());
       Ok(())
     },
   }
@@ -337,6 +361,11 @@ pub(crate) fn run(socket_path: &Path, command: Command, foreground: bool) -> Res
       Command::In(remind_in) => {
         let reminder = Reminder::from(remind_in);
         let () = run_server(socket_path, reminder, foreground)?;
+        Ok(())
+      },
+      Command::List => {
+        // We couldn't connect to a server so we assume there is none.
+        // Thus, there are also no reminders to list.
         Ok(())
       },
     },

@@ -5,12 +5,14 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::args::RemindIn;
+use crate::channel::Writer;
 use crate::reminder::Reminder;
 
 
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) enum Request {
   Remind(Reminder),
+  List(Writer<Vec<Reminder>>),
 }
 
 impl From<RemindIn> for Request {

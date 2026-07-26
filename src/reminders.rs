@@ -4,6 +4,8 @@
 use std::sync::mpsc::Receiver;
 use std::sync::mpsc::TryRecvError;
 
+use anyhow::Context as _;
+
 use crate::reminder::Reminder;
 use crate::request::Request;
 
@@ -49,6 +51,14 @@ impl Reminders {
 
     let reminder = match request {
       Request::Remind(reminder) => reminder,
+      Request::List(response) => {
+        // TODO: Must not unwrap.
+        let () = response
+          .write(&self.reminders)
+          .context("failed to send Reminder list")
+          .unwrap();
+        return Ok(())
+      },
     };
 
     let result = self
@@ -87,6 +97,8 @@ mod tests {
   use std::sync::mpsc::channel;
   use std::time::Duration;
   use std::time::UNIX_EPOCH;
+
+  use crate::channel::Channel;
 
 
   fn reminder(secs: u64, msg: &str) -> Reminder {
@@ -187,5 +199,28 @@ mod tests {
     let () = reminders.remove_next();
 
     assert_eq!(reminders.next_reminder(), None);
+  }
+
+  /// Check that we can list reminders via a [`Request`].
+  #[test]
+  fn reminder_listing() {
+    let (tx, rx) = channel();
+
+    let initial = reminder(20, "20");
+    let mut reminders = Reminders::new(rx, initial);
+
+    let () = tx.send(Request::Remind(reminder(10, "10"))).unwrap();
+    let () = reminders.try_recv().unwrap();
+
+    let () = tx.send(Request::Remind(reminder(30, "30"))).unwrap();
+    let () = reminders.try_recv().unwrap();
+
+    let (r, w) = Channel::oneshot().unwrap();
+    let () = tx.send(Request::List(w)).unwrap();
+    let () = reminders.try_recv().unwrap();
+
+    let list = r.read().unwrap();
+    let expected = vec![reminder(30, "30"), reminder(20, "20"), reminder(10, "10")];
+    assert_eq!(list, expected);
   }
 }

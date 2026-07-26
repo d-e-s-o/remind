@@ -55,6 +55,9 @@ pub struct Args {
 pub(crate) enum Command {
   /// Set a reminder after a given amount of time has elapsed.
   In(RemindIn),
+  /// List scheduled reminders.
+  #[clap(name = "ls", alias = "list")]
+  List,
 }
 
 /// A type representing the `in` command.
