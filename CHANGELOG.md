@@ -1,7 +1,7 @@
-Unreleased
-----------
+0.3.0
+-----
 - Added `list` sub-command for listing scheduled reminders
-- Moved `message` position argument to be part of `in` sub-command
+- Moved `message` positional argument to be part of `in` sub-command
 
 
 0.2.1
