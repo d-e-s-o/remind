@@ -12,6 +12,7 @@ use chrono::Local;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::args::RemindAt;
 use crate::args::RemindIn;
 
 
@@ -31,6 +32,14 @@ impl Reminder {
   #[inline]
   pub fn duration(&self) -> Option<Duration> {
     self.time.duration_since(SystemTime::now()).ok()
+  }
+}
+
+impl From<RemindAt> for Reminder {
+  fn from(other: RemindAt) -> Self {
+    let RemindAt { time, message } = other;
+
+    Self { time, message }
   }
 }
 

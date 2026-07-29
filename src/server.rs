@@ -331,6 +331,11 @@ fn signal_server(stream: UnixStream, command: Command) -> Result<()> {
   };
 
   match command {
+    Command::At(remind_at) => {
+      let request = Request::from(remind_at);
+      let () = send(&request)?;
+      Ok(())
+    },
     Command::In(remind_in) => {
       let request = Request::from(remind_in);
       let () = send(&request)?;
@@ -358,6 +363,11 @@ pub(crate) fn run(socket_path: &Path, command: Command, foreground: bool) -> Res
   match UnixStream::connect(socket_path) {
     Ok(stream) => signal_server(stream, command),
     Err(_) => match command {
+      Command::At(remind_at) => {
+        let reminder = Reminder::from(remind_at);
+        let () = run_server(socket_path, reminder, foreground)?;
+        Ok(())
+      },
       Command::In(remind_in) => {
         let reminder = Reminder::from(remind_in);
         let () = run_server(socket_path, reminder, foreground)?;

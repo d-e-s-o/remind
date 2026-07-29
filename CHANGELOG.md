@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Added `at` sub-command for scheduling reminder at a specific time
+
+
 0.3.0
 -----
 - Added `list` sub-command for listing scheduled reminders
