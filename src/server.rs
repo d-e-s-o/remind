@@ -52,7 +52,7 @@ use postcard::from_bytes as postcard_from_bytes;
 use postcard::to_io as postcard_to_io;
 
 use crate::args::Command;
-use crate::args::RemindIn;
+use crate::args::RemindAt;
 use crate::channel::Channel;
 use crate::reminder::Reminder;
 use crate::reminder::format_reminders;
@@ -305,7 +305,7 @@ fn run_server(socket_path: &Path, reminder: Reminder, foreground: bool) -> Resul
       // Start over.
       return run(
         socket_path,
-        Command::In(RemindIn::from(reminder)),
+        Command::At(RemindAt::from(reminder)),
         foreground,
       )
     },

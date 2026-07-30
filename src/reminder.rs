@@ -56,17 +56,10 @@ impl From<RemindIn> for Reminder {
 
 // TODO: We shouldn't need this conversion, except that because of our
 //       recursive connection fallback logic we do.
-impl From<Reminder> for RemindIn {
+impl From<Reminder> for RemindAt {
   fn from(other: Reminder) -> Self {
     let Reminder { time, message } = other;
-    let now = SystemTime::now();
-
-    RemindIn {
-      duration: time
-        .duration_since(now)
-        .unwrap_or_else(|_err| Duration::from_secs(0)),
-      message,
-    }
+    Self { time, message }
   }
 }
 
