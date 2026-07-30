@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.3.1
+-----
 - Added `at` sub-command for scheduling reminder at a specific time
 
 
